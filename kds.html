@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>Rands KDS | Kitchen Display System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0c12;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      padding: 20px;
+      min-height: 100vh;
+      color: #ffffff;
+    }
+
+    /* FULLSCREEN GRID LAYOUT — NO SIDEBARS */
+    .kds-container {
+      max-width: 1920px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Header with logo integration */
+    .kds-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 0 20px 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(220, 38, 38, 0.4);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .brand-logo {
+      height: 48px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 8px rgba(239,68,68,0.3));
+      transition: transform 0.2s;
+    }
+    .brand-logo:hover {
+      transform: scale(1.02);
+    }
+    .logo-fallback {
+      width: 48px;
+      height: 48px;
+      background: #dc2626;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+    }
+    .kds-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff, #ef4444);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .kds-title small {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      background: none;
+      -webkit-background-clip: unset;
+      background-clip: unset;
+      color: #94a3b8;
+      margin-left: 12px;
+    }
+    .live-clock {
+      font-family: monospace;
+      font-size: 1.3rem;
+      font-weight: 600;
+      background: #1e293b;
+      padding: 6px 18px;
+      border-radius: 60px;
+      letter-spacing: 1px;
+      color: #facc15;
+    }
+
+    /* RESPONSIVE GRID — CARDS AUTO-ARRANGE */
+    .orders-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 24px;
+      transition: all 0.2s;
+    }
+
+    /* ORDER CARD — LARGE, BOLD, HIGH VISIBILITY */
+    .order-card {
+      background: #11161f;
+      border-radius: 32px;
+      padding: 24px;
+      border-left: 8px solid;
+      transition: all 0.2s ease;
+      box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(2px);
+    }
+
+    /* State color mapping (border + subtle background) */
+    .order-card.state-new {
+      border-left-color: #eab308;
+      background: linear-gradient(145deg, #1e1b12, #11161f);
+    }
+    .order-card.state-preparing {
+      border-left-color: #f97316;
+      background: linear-gradient(145deg, #1f1a14, #11161f);
+    }
+    .order-card.state-ready {
+      border-left-color: #10b981;
+      background: #0f1f1a;
+      opacity: 0.85;
+    }
+    .order-card.alert-delay {
+      box-shadow: 0 0 0 2px #dc2626, 0 12px 28px -10px #dc2626;
+      animation: pulseWarning 1.2s infinite;
+    }
+
+    @keyframes pulseWarning {
+      0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4), 0 12px 28px -10px #dc2626; }
+      70% { box-shadow: 0 0 0 4px rgba(220,38,38,0.2), 0 12px 28px -8px #dc2626; }
+      100% { box-shadow: 0 0 0 0 rgba(220,38,38,0), 0 12px 28px -10px #dc2626; }
+    }
+
+    /* ORDER NUMBER (HUGE) */
+    .order-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .order-badge {
+      font-size: 0.7rem;
+      background: rgba(255,255,255,0.1);
+      padding: 4px 12px;
+      border-radius: 40px;
+      font-weight: 500;
+    }
+
+    /* TIMER — LARGE AND BOLD */
+    .timer-section {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: monospace;
+      margin: 16px 0 12px 0;
+      background: #00000030;
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 60px;
+      width: fit-content;
+    }
+    .timer-warning {
+      color: #f87171;
+      text-shadow: 0 0 4px #dc2626;
+    }
+
+    /* ITEMS LIST — LARGE FONT, EASY TO READ */
+    .items-list {
+      margin: 16px 0;
+      flex: 1;
+    }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.1rem;
+      font-weight: 500;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .item-name {
+      font-weight: 600;
+    }
+    .item-qty {
+      font-weight: 700;
+      color: #facc15;
+      background: #1e293b;
+      padding: 2px 12px;
+      border-radius: 30px;
+    }
+    .order-notes {
+      background: #1e1f2e;
+      border-radius: 20px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 0.85rem;
+      color: #fcd34d;
+      border-left: 3px solid #f97316;
+    }
+
+    /* ACTION BUTTONS — LARGE, TOUCH-FRIENDLY */
+    .action-buttons {
+      display: flex;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .kitchen-btn {
+      flex: 1;
+      padding: 16px 12px;
+      border-radius: 60px;
+      font-weight: 800;
+      font-size: 1rem;
+      border: none;
+      cursor: pointer;
+      transition: 0.08s linear;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+    .btn-start {
+      background: #f97316;
+      color: white;
+      box-shadow: 0 4px 12px rgba(249,115,22,0.3);
+    }
+    .btn-ready {
+      background: #10b981;
+      color: white;
+      box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+    }
+    .kitchen-btn:active { transform: scale(0.97); }
+
+    /* Empty state */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      background: #0f121c;
+      border-radius: 48px;
+      font-size: 1.5rem;
+      color: #5b6e8c;
+    }
+
+    /* responsive: extra large screens (TV) */
+    @media (min-width: 1400px) {
+      .orders-grid { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; }
+      .order-number { font-size: 3rem; }
+      .timer-section { font-size: 2.2rem; }
+      .item-row { font-size: 1.25rem; }
+      .kitchen-btn { padding: 18px 12px; font-size: 1.1rem; }
+      .brand-logo { height: 56px; }
+    }
+
+    @media (max-width: 700px) {
+      body { padding: 12px; }
+      .orders-grid { grid-template-columns: 1fr; gap: 16px; }
+      .order-number { font-size: 1.8rem; }
+      .timer-section { font-size: 1.4rem; }
+      .brand-logo { height: 38px; }
+      .kds-title { font-size: 1.2rem; }
+    }
+
+    /* scrollbar minimal */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #0f121c; }
+    ::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 10px; }
+  </style>
+</head>
+<body>
+<div class="kds-container">
+  <div class="kds-header">
+    <div class="header-left">
+      <!-- Logo with fallback -->
+      <img class="brand-logo" src="images/rands-logo.png" alt="Rands Logo" id="kdsLogo" onerror="handleLogoError()">
+      <div id="logoFallback" style="display: none;">
+        <div class="logo-fallback">R</div>
+      </div>
+      <div class="kds-title">
+        🥩 KITCHEN DISPLAY
+        <small>live orders</small>
+      </div>
+    </div>
+    <div class="live-clock" id="liveClock">--:--:--</div>
+  </div>
+
+  <div class="orders-grid" id="kdsGrid">
+    <div class="empty-state">✨ No active orders — waiting for kitchen tickets</div>
+  </div>
+</div>
+
+<script>
+  // Logo error handler
+  function handleLogoError() {
+    const img = document.getElementById('kdsLogo');
+    const fallback = document.getElementById('logoFallback');
+    if (img && fallback) {
+      img.style.display = 'none';
+      fallback.style.display = 'flex';
+      fallback.style.justifyContent = 'center';
+      fallback.style.alignItems = 'center';
+    }
+  }
+
+  // ---------- KITCHEN DISPLAY SYSTEM (KDS) ----------
+  // INTEGRATION WITH STAFF DASHBOARD & CUSTOMER STATUS PAGE
+  // Uses localStorage as shared bus for orders.
+  // Order schema: {
+  //   ticketNumber: string,
+  //   items: array<{name, quantity, notes?}>,
+  //   kitchenStatus: 'new' | 'preparing' | 'ready',
+  //   createdAt: ISO timestamp (when sent to kitchen),
+  //   updatedAt: ISO,
+  //   notesPerItem?: combined notes string,
+  //   globalNote?: string
+  // }
+  
+  const STORAGE_KEY = 'butcher_shop_orders';   // Shared with staff dashboard
+  const QUEUE_KEY = 'butcher_shop_queue';       // To sync removal when completed
+  
+  // Helper: load orders from localStorage
+  function loadOrders() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }
+  
+  function saveOrders(orders) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+    // trigger storage event for other tabs (staff dashboard, customer view)
+    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: JSON.stringify(orders) }));
+  }
+  
+  // Helper to remove order from queue when marked "Ready" (optional integration)
+  function removeTicketFromQueue(ticketNumber) {
+    let queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+    const newQueue = queue.filter(t => t.ticketNumber !== ticketNumber);
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(newQueue));
+  }
+  
+  // Format elapsed time since creation (live timer)
+  function getElapsedTime(createdAtISO) {
+    const created = new Date(createdAtISO);
+    const now = new Date();
+    const diffSeconds = Math.floor((now - created) / 1000);
+    if (diffSeconds < 60) return `${diffSeconds} sec`;
+    const mins = Math.floor(diffSeconds / 60);
+    const secs = diffSeconds % 60;
+    if (mins < 60) return `${mins} min ${secs}s`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  }
+  
+  // Check if order is overdue ( > 10 minutes for new/preparing)
+  function isOrderDelayed(order) {
+    if (order.kitchenStatus === 'ready') return false;
+    const created = new Date(order.createdAt);
+    const now = new Date();
+    const diffMinutes = (now - created) / 60000;
+    return diffMinutes > 10;   // 10+ minutes = alert
+  }
+  
+  // Combine items and notes for display
+  function extractOrderNotes(order) {
+    let notesList = [];
+    if (order.items && order.items.length) {
+      order.items.forEach(item => {
+        if (item.notes && item.notes.trim()) {
+          notesList.push(`${item.name}: ${item.notes}`);
+        }
+      });
+    }
+    if (order.globalNote) notesList.push(order.globalNote);
+    return notesList;
+  }
+  
+  // Update state: mark as "preparing"
+  function startPreparing(ticketNumber) {
+    let orders = loadOrders();
+    const order = orders.find(o => o.ticketNumber === ticketNumber);
+    if (order && order.kitchenStatus === 'new') {
+      order.kitchenStatus = 'preparing';
+      order.updatedAt = new Date().toISOString();
+      saveOrders(orders);
+      renderKDS();
+    }
+  }
+  
+  // Mark as ready -> also remove from queue & notify other systems
+  function markAsReady(ticketNumber) {
+    let orders = loadOrders();
+    const orderIndex = orders.findIndex(o => o.ticketNumber === ticketNumber);
+    if (orderIndex !== -1 && orders[orderIndex].kitchenStatus !== 'ready') {
+      orders[orderIndex].kitchenStatus = 'ready';
+      orders[orderIndex].updatedAt = new Date().toISOString();
+      saveOrders(orders);
+      // Remove from queue so staff dashboard reflects completed
+      removeTicketFromQueue(ticketNumber);
+      renderKDS();
+    }
+  }
+  
+  // Main render: display orders with state 'new' and 'preparing' (active kitchen)
+  // Ready orders are NOT shown in main grid, but kept for archive
+  function renderKDS() {
+    const allOrders = loadOrders();
+    // Active orders: only new + preparing (ready should not appear in kitchen)
+    let activeOrders = allOrders.filter(o => o.kitchenStatus === 'new' || o.kitchenStatus === 'preparing');
+    // Sort: oldest first (by createdAt)
+    activeOrders.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    
+    const grid = document.getElementById('kdsGrid');
+    if (activeOrders.length === 0) {
+      grid.innerHTML = `<div class="empty-state">✅ Kitchen ready — no pending orders</div>`;
+      return;
+    }
+    
+    grid.innerHTML = activeOrders.map(order => {
+      const state = order.kitchenStatus; // 'new' or 'preparing'
+      const elapsed = getElapsedTime(order.createdAt);
+      const isDelayed = isOrderDelayed(order);
+      const notesList = extractOrderNotes(order);
+      
+      // Build items HTML (large font, readable)
+      let itemsHtml = '';
+      if (order.items && order.items.length) {
+        itemsHtml = order.items.map(item => `
+          <div class="item-row">
+            <span class="item-name">${escapeHtml(item.name)}</span>
+            <span class="item-qty">x${item.quantity}</span>
+          </div>
+        `).join('');
+      } else {
+        // Fallback if items missing (legacy order)
+        itemsHtml = `<div class="item-row"><span class="item-name">Order items</span><span class="item-qty">—</span></div>`;
+      }
+      
+      // Notes section
+      let notesHtml = '';
+      if (notesList.length > 0) {
+        notesHtml = `<div class="order-notes"><i class="fas fa-pen"></i> ${notesList.map(n => escapeHtml(n)).join(' • ')}</div>`;
+      }
+      
+      // State-specific badge
+      let stateLabel = state === 'new' ? '🆕 NEW ORDER' : '👨‍🍳 PREPARING';
+      
+      // Determine button based on state
+      let actionButton = '';
+      if (state === 'new') {
+        actionButton = `<button class="kitchen-btn btn-start" data-ticket="${order.ticketNumber}" data-action="start">▶ START PREPARING</button>`;
+      } else if (state === 'preparing') {
+        actionButton = `<button class="kitchen-btn btn-ready" data-ticket="${order.ticketNumber}" data-action="ready">✅ MARK READY</button>`;
+      }
+      
+      // Card class: border + optional delay alert
+      let cardClasses = `order-card state-${state}`;
+      if (isDelayed) cardClasses += ' alert-delay';
+      
+      return `
+        <div class="${cardClasses}" data-order-id="${order.ticketNumber}">
+          <div class="order-number">
+            <span>#${order.ticketNumber}</span>
+            <span class="order-badge">${stateLabel}</span>
+          </div>
+          <div class="timer-section ${isDelayed ? 'timer-warning' : ''}">
+            <i class="far fa-hourglass-half"></i> ${elapsed}
+            ${isDelayed ? ' ⚠️ DELAY' : ''}
+          </div>
+          <div class="items-list">
+            ${itemsHtml}
+          </div>
+          ${notesHtml}
+          <div class="action-buttons">
+            ${actionButton}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Attach event listeners dynamically
+    document.querySelectorAll('.kitchen-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ticket = btn.dataset.ticket;
+        const action = btn.dataset.action;
+        if (action === 'start') startPreparing(ticket);
+        else if (action === 'ready') markAsReady(ticket);
+      });
+    });
+  }
+  
+  // Helper to escape HTML
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+  
+  // Live clock update (for TV visibility)
+  function updateClock() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const clockElem = document.getElementById('liveClock');
+    if (clockElem) clockElem.innerText = timeStr;
+  }
+  
+  // Listen to cross-tab storage events (from staff dashboard / customer page)
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) {
+      renderKDS();
+    }
+    if (e.key === QUEUE_KEY) {
+      renderKDS();
+    }
+  });
+  
+  // Simulate real-time timer update every second (refresh timers only)
+  let timerInterval = null;
+  function startLiveTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      renderKDS();      // re-render to update timers + delay warnings
+      updateClock();
+    }, 1000);
+  }
+  
+  // Normalize order states to follow KDS flow (new -> preparing -> ready)
+  function normalizeOrderStates() {
+    let orders = loadOrders();
+    let changed = false;
+    orders = orders.map(order => {
+      // If order has no kitchenStatus, set to 'new'
+      if (!order.kitchenStatus) {
+        order.kitchenStatus = 'new';
+        changed = true;
+      }
+      // If order status is 'preparing' but was just created (less than 5 secs) and hasn't been started,
+      // keep as new. This handles dashboard sending 'preparing' by mistake.
+      if (order.kitchenStatus === 'preparing' && !order._converted) {
+        const age = (Date.now() - new Date(order.createdAt)) / 1000;
+        if (age < 10) {
+          order.kitchenStatus = 'new';
+          changed = true;
+        }
+      }
+      // Ensure items array exists
+      if (!order.items) {
+        order.items = [];
+        changed = true;
+      }
+      return order;
+    });
+    if (changed) saveOrders(orders);
+  }
+  
+  // Demo: if no orders exist, add a sample order to demonstrate UI (but won't interfere with real data)
+  function seedDemoOrderIfEmpty() {
+    let orders = loadOrders();
+    const hasActiveOrders = orders.some(o => o.kitchenStatus === 'new' || o.kitchenStatus === 'preparing');
+    if (!hasActiveOrders && orders.length === 0) {
+      const demoOrder = {
+        ticketNumber: "B-1001",
+        items: [
+          { name: "Wagyu Ribeye", quantity: 2, notes: "medium rare" },
+          { name: "Garlic Chips", quantity: 1, notes: "extra crispy" },
+          { name: "Peppercorn Sauce", quantity: 1, notes: "on side" }
+        ],
+        kitchenStatus: "new",
+        createdAt: new Date(Date.now() - 4 * 60000).toISOString(),
+        updatedAt: new Date().toISOString(),
+        globalNote: "🔥 VIP table — rush order"
+      };
+      saveOrders([demoOrder]);
+    } else if (!hasActiveOrders && orders.length > 0) {
+      // If there are orders but all are ready/completed, we keep empty state.
+      // No action needed.
+    }
+  }
+  
+  // Initial load & sync with existing orders
+  function initKDS() {
+    normalizeOrderStates();
+    seedDemoOrderIfEmpty(); // only for first-time demo, won't overwrite real orders
+    renderKDS();
+    startLiveTimer();
+    updateClock();
+  }
+  
+  // Expose functions for debugging (optional)
+  window.kdsAPI = { startPreparing, markAsReady, renderKDS };
+  
+  // Start the system
+  initKDS();
+  
+  // Re-normalize periodically to catch any inconsistent states from dashboard
+  setInterval(() => {
+    normalizeOrderStates();
+    renderKDS();
+  }, 30000);
+</script>
+</body>
+</html>

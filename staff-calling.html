@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>ButcherShop · Staff Command with Preorder</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+  body { background: #f1f5f9; padding: 20px; min-height: 100vh; }
+  .dashboard { display: grid; grid-template-columns: 320px 1fr 360px; gap: 20px; max-width: 1600px; margin: 0 auto; }
+  .card { background: white; border-radius: 28px; overflow: hidden; border: 1px solid #eef2f6; }
+  .card-header { padding: 18px 20px; background: white; border-bottom: 2px solid #f0f0f0; font-weight: 700; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
+  .queue-list { max-height: calc(100vh - 140px); overflow-y: auto; padding: 8px 12px; }
+  .queue-item { background: #ffffff; border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid #e9edf2; cursor: pointer; }
+  .queue-item.active { background: #fff5f5; border-left: 5px solid #dc2626; }
+  .queue-ticket { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .ticket-num { font-weight: 800; font-size: 1.25rem; }
+  .badge { padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; }
+  .badge-waiting { background: #e2e8f0; color: #334155; }
+  .badge-called { background: #3b82f6; color: white; }
+  .badge-order { background: #10b981; color: white; }
+  .btn-icon-group { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .btn-sm { background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+  .btn-sm-call { background: #dc2626; color: white; }
+  .btn-sm-skip { background: #f97316; color: white; }
+  
+  /* PREORDER CONFIRMATION MODAL */
+  .preorder-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; align-items: center; justify-content: center; }
+  .preorder-container { background: white; border-radius: 32px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; padding: 24px; position: relative; }
+  .close-modal { position: absolute; top: 16px; right: 20px; font-size: 28px; cursor: pointer; color: #999; }
+  .category-row { display: flex; gap: 10px; margin: 20px 0; overflow-x: auto; }
+  .cat-pill { background: #f1f5f9; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+  .cat-pill.active { background: #dc2626; color: white; }
+  .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; max-height: 300px; overflow-y: auto; }
+  .menu-item { background: #f8fafc; border-radius: 20px; padding: 12px; text-align: center; cursor: pointer; border: 1px solid #ffcccc; }
+  .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+  .btn-primary-modal { background: #dc2626; color: white; border: none; padding: 14px; border-radius: 40px; font-weight: bold; width: 100%; margin-top: 12px; cursor: pointer; }
+  
+  .pos-categories { display: flex; gap: 10px; padding: 15px 20px; border-bottom: 1px solid #edf2f7; flex-wrap: wrap; }
+  .cat-btn { background: #f1f5f9; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+  .cat-btn.active { background: #dc2626; color: white; }
+  .items-grid-pos { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; padding: 20px; max-height: 320px; overflow-y: auto; }
+  .item-card { background: white; border: 1px solid #eef2ff; border-radius: 20px; padding: 12px 8px; text-align: center; cursor: pointer; }
+  .cart-section { background: #fafcff; border-top: 2px solid #f0f0f0; padding: 16px; max-height: 340px; overflow-y: auto; }
+  .cart-item { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center; background: white; padding: 8px 12px; border-radius: 16px; }
+  .action-buttons-pos { display: flex; gap: 12px; margin: 15px; }
+  .btn-pos { flex: 1; padding: 14px; border-radius: 40px; font-weight: bold; border: none; cursor: pointer; }
+  .btn-card { background: #1e293b; color: white; }
+  .btn-wallet { background: #10b981; color: white; }
+  .btn-kitchen { background: #f97316; color: white; }
+  .order-tabs { display: flex; border-bottom: 1px solid #e9eef3; }
+  .order-tab { flex: 1; text-align: center; padding: 14px; font-weight: 600; background: white; border: none; cursor: pointer; }
+  .order-tab.active { color: #dc2626; border-bottom: 3px solid #dc2626; }
+  .order-list { padding: 12px; max-height: calc(100vh - 180px); overflow-y: auto; }
+  .order-card { background: white; border-radius: 20px; padding: 14px; margin-bottom: 12px; border-left: 6px solid; }
+  @media (max-width: 780px) { .dashboard { display: flex; flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <div class="card">
+    <div class="card-header"><span><i class="fas fa-users"></i> Waiting Line</span><button class="btn-sm" id="globalCallNextBtn" style="background:#dc2626; color:white;">Call Next</button></div>
+    <div class="queue-list" id="queueListContainer"></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span><i class="fas fa-cash-register"></i> Active Order</span><span id="activeTicketBadge">No ticket selected</span></div>
+    <div id="activeCustomerInfo" style="padding: 12px 20px; background:#fff8f0;"><strong id="activeTicketNumber">—</strong> <span id="activeOrderStatusMsg">Select a customer</span></div>
+    <div class="pos-categories" id="categoriesContainer"></div>
+    <div class="items-grid-pos" id="itemsGrid"></div>
+    <div class="cart-section"><div style="font-weight:bold;">🛒 Current Order</div><div id="cartItemsList">No items</div><div id="cartTotal" style="text-align:right; font-weight:800;">R0.00</div></div>
+    <div class="action-buttons-pos"><button class="btn-pos btn-card" id="payCardBtn">💳 Pay Card</button><button class="btn-pos btn-wallet" id="payWalletBtn">💰 Wallet</button><button class="btn-pos btn-kitchen" id="sendToKitchenBtn">🔥 Send to Kitchen</button></div>
+    <div id="paymentWarning" style="display:none; background:#fee2e2; color:#b91c1c; padding:10px; margin:10px; border-radius:40px; text-align:center;">⚠️ Payment required</div>
+  </div>
+  <div class="card">
+    <div class="order-tabs" id="orderTabs"><button class="order-tab active" data-status="preparing">🔥 In Progress</button><button class="order-tab" data-status="ready">✅ Ready</button><button class="order-tab" data-status="completed">📦 Completed</button></div>
+    <div class="order-list" id="kitchenOrdersList"></div>
+  </div>
+</div>
+
+<script>
+  const QUEUE_KEY = "butcher_shop_queue";
+  const ORDERS_KEY = "butcher_shop_orders";
+  function getQueue() { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
+  function saveQueue(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }
+  function getOrders() { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); }
+  function saveOrders(orders) { localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); }
+
+  const menu = {
+    meat: [{ id: "ribeye", name: "Ribeye Steak", price: 159 }, { id: "beef_sausage", name: "Beef Sausage", price: 89 }, { id: "lamb_chop", name: "Lamb Chop", price: 199 }, { id: "bacon_pack", name: "Bacon 500g", price: 79 }],
+    meals: [{ id: "steak_combo", name: "Steak + Chips", price: 189 }, { id: "boerewors_roll", name: "Boerewors Roll", price: 65 }, { id: "barbecue_platter", name: "BBQ Platter", price: 299 }],
+    sides: [{ id: "chips", name: "Chips", price: 25 }, { id: "salad", name: "Fresh Salad", price: 32 }, { id: "pap_sheba", name: "Pap & Sheba", price: 28 }],
+    drinks: [{ id: "coke", name: "Coca-Cola", price: 18 }, { id: "water", name: "Still Water", price: 12 }, { id: "beer", name: "Castle Lager", price: 28 }]
+  };
+
+  let currentActiveTicket = null, currentCart = [], currentOrderPaid = false, currentOrderLocked = false;
+  let activeCategory = "meat";
+
+  function refreshAll() { renderQueueList(); renderMenuAndCart(); renderKitchenOrders(); updateActiveDisplay(); }
+  
+  function renderQueueList() {
+    const queue = getQueue();
+    const container = document.getElementById('queueListContainer');
+    if (!queue.length) { container.innerHTML = '<div style="padding:30px;text-align:center;">✨ Empty</div>'; return; }
+    container.innerHTML = queue.map((ticket, idx) => {
+      const hasOrder = getOrders().some(o => o.ticketNumber === ticket.ticketNumber);
+      const statusClass = ticket.called ? "badge-called" : "badge-waiting";
+      const statusText = ticket.called ? "Called" : "Waiting";
+      return `<div class="queue-item ${currentActiveTicket?.ticketNumber === ticket.ticketNumber ? 'active' : ''}" data-ticket-idx="${idx}"><div class="queue-ticket"><span class="ticket-num">${ticket.ticketNumber}</span><span class="badge ${statusClass}">${statusText}</span></div>${hasOrder ? '<div><span class="badge badge-order">📋 Order Placed</span></div>' : ''}<div class="btn-icon-group"><button class="btn-sm btn-sm-call call-ticket" data-ticket="${ticket.ticketNumber}"><i class="fas fa-phone"></i> Call</button><button class="btn-sm btn-sm-skip skip-ticket" data-ticket="${ticket.ticketNumber}"><i class="fas fa-forward"></i> Skip</button></div></div>`;
+    }).join('');
+    document.querySelectorAll('.call-ticket').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); callTicket(btn.dataset.ticket); }));
+    document.querySelectorAll('.skip-ticket').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); skipTicket(btn.dataset.ticket); }));
+    document.querySelectorAll('.queue-item').forEach(el => { el.addEventListener('click', () => { const idx = el.dataset.ticketIdx; const q = getQueue(); if (q[idx]) selectTicket(q[idx]); }); });
+  }
+  
+  // OPEN PREORDER CONFIRMATION MODAL with customer's existing order
+  function openPreorderConfirmation(ticket) {
+    const orders = getOrders();
+    const existingOrder = orders.find(o => o.ticketNumber === ticket.ticketNumber);
+    
+    let preorderCart = existingOrder?.items || [];
+    let preorderCategory = "meat";
+    
+    const modal = document.createElement('div');
+    modal.className = 'preorder-modal';
+    
+    function renderModal() {
+      const categoriesHtml = Object.keys(menu).map(cat => `<span class="cat-pill ${preorderCategory === cat ? 'active' : ''}" data-cat="${cat}">${cat.toUpperCase()}</span>`).join('');
+      const items = menu[preorderCategory] || [];
+      const itemsHtml = items.map(item => `<div class="menu-item" data-item='${JSON.stringify(item)}'><div>${item.name}</div><div style="color:#dc2626;">R${item.price}</div></div>`).join('');
+      const cartTotal = preorderCart.reduce((s,i) => s + i.price * i.quantity, 0);
+      const cartHtml = preorderCart.map((it, idx) => `<div class="cart-item-row"><span><strong>${it.name}</strong> x${it.quantity}</span><span>R${it.price * it.quantity}</span><button class="remove-item" data-idx="${idx}" style="background:none; border:none; color:#f44336;">🗑️</button></div>`).join('');
+      
+      modal.innerHTML = `
+        <div class="preorder-container">
+          <div class="close-modal">&times;</div>
+          <h3 style="color:#dc2626;">📝 Confirm Order for ${ticket.ticketNumber}</h3>
+          <p>Customer: ${ticket.customerName || 'Guest'} | ${ticket.whatsapp || ''}</p>
+          <div class="category-row" id="preorderCategories">${categoriesHtml}</div>
+          <div class="items-grid" id="preorderItems">${itemsHtml}</div>
+          <div style="border-top:2px solid #ffcccc; margin-top:12px; padding-top:12px;">
+            <strong>🛒 Order Summary</strong>
+            <div id="preorderCart">${cartHtml || '<div>Empty</div>'}</div>
+            <div style="text-align:right; font-weight:800;">Total: R${cartTotal}</div>
+            <input type="text" id="preorderNote" placeholder="Special instructions" style="width:100%; padding:10px; border-radius:40px; border:1px solid #ffcccc; margin:12px 0;" value="${existingOrder?.items?.[0]?.notes || ''}">
+            <button id="confirmOrderBtn" class="btn-primary-modal" ${preorderCart.length === 0 ? 'disabled' : ''}>Confirm Order → Send to POS</button>
+          </div>
+        </div>
+      `;
+      
+      document.querySelectorAll('.cat-pill').forEach(btn => btn.addEventListener('click', () => { preorderCategory = btn.dataset.cat; renderModal(); }));
+      document.querySelectorAll('.menu-item').forEach(el => el.addEventListener('click', () => {
+        const item = JSON.parse(el.dataset.item);
+        const existing = preorderCart.find(i => i.id === item.id);
+        if (existing) existing.quantity += 1;
+        else preorderCart.push({ ...item, quantity: 1, notes: "" });
+        renderModal();
+      }));
+      document.querySelectorAll('.remove-item').forEach(btn => btn.addEventListener('click', () => { preorderCart.splice(parseInt(btn.dataset.idx), 1); renderModal(); }));
+      modal.querySelector('.close-modal').onclick = () => modal.remove();
+      modal.querySelector('#confirmOrderBtn')?.addEventListener('click', () => {
+        if (preorderCart.length === 0) { alert("Add items to order"); return; }
+        const note = document.getElementById('preorderNote')?.value || '';
+        let orders = getOrders();
+        const idx = orders.findIndex(o => o.ticketNumber === ticket.ticketNumber);
+        if (idx !== -1) {
+          orders[idx].items = preorderCart.map(i => ({ ...i, notes: i.notes || note }));
+          orders[idx].total = preorderCart.reduce((s,i) => s + i.price * i.quantity, 0);
+          orders[idx].updatedAt = new Date().toISOString();
+        } else {
+          orders.push({ ticketNumber: ticket.ticketNumber, customerName: ticket.customerName, items: preorderCart.map(i => ({ ...i, notes: note })), total: preorderCart.reduce((s,i) => s + i.price * i.quantity, 0), paid: false, kitchenStatus: 'new', createdAt: new Date().toISOString() });
+        }
+        saveOrders(orders);
+        modal.remove();
+        alert(`✅ Order confirmed for ${ticket.ticketNumber}! You can now process payment.`);
+        selectTicket(ticket);
+        refreshAll();
+      });
+    }
+    renderModal();
+    document.body.appendChild(modal);
+  }
+  
+  function callTicket(ticketNum) {
+    let queue = getQueue();
+    const idx = queue.findIndex(t => t.ticketNumber === ticketNum);
+    if (idx !== -1) {
+      queue[idx].called = true;
+      saveQueue(queue);
+      refreshAll();
+      selectTicket(queue[idx]);
+      // OPEN PREORDER CONFIRMATION MODAL
+      openPreorderConfirmation(queue[idx]);
+    }
+  }
+  
+  function skipTicket(ticketNum) {
+    let queue = getQueue();
+    const newQueue = queue.filter(t => t.ticketNumber !== ticketNum);
+    saveQueue(newQueue);
+    if (currentActiveTicket?.ticketNumber === ticketNum) { currentActiveTicket = null; currentCart = []; }
+    refreshAll();
+  }
+  
+  function callNext() {
+    let queue = getQueue();
+    if (!queue.length) { alert("No customers"); return; }
+    queue[0].called = true;
+    saveQueue(queue);
+    refreshAll();
+    selectTicket(queue[0]);
+    openPreorderConfirmation(queue[0]);
+  }
+  
+  function selectTicket(ticket) {
+    currentActiveTicket = ticket;
+    const orders = getOrders();
+    const existingOrder = orders.find(o => o.ticketNumber === ticket.ticketNumber);
+    if (existingOrder && existingOrder.items) {
+      currentCart = existingOrder.items.map(it => ({ ...it }));
+      currentOrderPaid = existingOrder.paid || false;
+      currentOrderLocked = (existingOrder.kitchenStatus === 'preparing' || existingOrder.kitchenStatus === 'ready');
+    } else {
+      currentCart = [];
+      currentOrderPaid = false;
+      currentOrderLocked = false;
+    }
+    updateActiveDisplay();
+    renderMenuAndCart();
+  }
+  
+  function updateActiveDisplay() {
+    document.getElementById('activeTicketNumber').innerText = currentActiveTicket?.ticketNumber || '—';
+    document.getElementById('activeOrderStatusMsg').innerText = currentOrderLocked ? "In Kitchen" : (currentCart.length ? `${currentCart.length} items` : "No order");
+  }
+  
+  function renderMenuAndCart() {
+    const catsHtml = Object.keys(menu).map(cat => `<button class="cat-btn ${activeCategory === cat ? 'active' : ''}" data-cat="${cat}">${cat.toUpperCase()}</button>`).join('');
+    document.getElementById('categoriesContainer').innerHTML = catsHtml;
+    document.querySelectorAll('.cat-btn').forEach(btn => btn.addEventListener('click', () => { activeCategory = btn.dataset.cat; renderMenuAndCart(); }));
+    const items = menu[activeCategory] || [];
+    const itemsHtml = items.map(item => `<div class="item-card" data-item='${JSON.stringify(item)}'><div class="item-name">${item.name}</div><div class="item-price">R${item.price}</div></div>`).join('');
+    document.getElementById('itemsGrid').innerHTML = itemsHtml;
+    document.querySelectorAll('.item-card').forEach(card => card.addEventListener('click', () => { if (!currentOrderLocked) { const item = JSON.parse(card.dataset.item); const existing = currentCart.find(i => i.id === item.id); if(existing) existing.quantity++; else currentCart.push({ ...item, quantity: 1, notes: "" }); renderMenuAndCart(); } }));
+    
+    if(!currentCart.length) { document.getElementById('cartItemsList').innerHTML = '<div>Empty</div>'; document.getElementById('cartTotal').innerHTML = 'R0.00'; return; }
+    let total = 0;
+    const cartHtml = currentCart.map((it, idx) => { total += it.price * it.quantity; return `<div class="cart-item"><div><strong>${it.name}</strong> x${it.quantity}</div><div>R${it.price * it.quantity}</div><button class="remove-item" data-idx="${idx}" style="background:none; color:#f44336;">🗑️</button></div>`; }).join('');
+    document.getElementById('cartItemsList').innerHTML = cartHtml;
+    document.getElementById('cartTotal').innerHTML = `R${total.toFixed(2)}`;
+    document.querySelectorAll('.remove-item').forEach(btn => btn.addEventListener('click', () => { currentCart.splice(parseInt(btn.dataset.idx),1); renderMenuAndCart(); }));
+  }
+  
+  function markAsPaid(method) { if(!currentActiveTicket || !currentCart.length) return; currentOrderPaid = true; alert(`✅ ${method} payment confirmed`); renderMenuAndCart(); }
+  function sendToKitchen() {
+    if(!currentActiveTicket) return;
+    if(!currentCart.length) { alert("No items"); return; }
+    if(!currentOrderPaid) { document.getElementById('paymentWarning').style.display = 'block'; setTimeout(()=> document.getElementById('paymentWarning').style.display='none', 2500); return; }
+    let orders = getOrders();
+    const idx = orders.findIndex(o => o.ticketNumber === currentActiveTicket.ticketNumber);
+    if(idx !== -1) { orders[idx].items = currentCart; orders[idx].total = currentCart.reduce((s,i)=> s + i.price * i.quantity,0); orders[idx].paid = true; orders[idx].kitchenStatus = "preparing"; orders[idx].updatedAt = new Date().toISOString(); }
+    else { orders.push({ ticketNumber: currentActiveTicket.ticketNumber, items: currentCart, total: currentCart.reduce((s,i)=> s + i.price * i.quantity,0), paid: true, kitchenStatus: "preparing", createdAt: new Date().toISOString() }); }
+    saveOrders(orders);
+    currentOrderLocked = true;
+    alert(`🔥 Order sent to kitchen!`);
+    renderKitchenOrders();
+    refreshAll();
+  }
+  
+  function renderKitchenOrders() {
+    const orders = getOrders();
+    const activeTab = document.querySelector('.order-tab.active')?.dataset.status || "preparing";
+    let filtered = orders.filter(o => o.kitchenStatus === activeTab);
+    const container = document.getElementById('kitchenOrdersList');
+    if(!filtered.length) { container.innerHTML = '<div style="padding:30px;">No orders</div>'; return; }
+    container.innerHTML = filtered.map(order => `<div class="order-card" style="border-left-color: ${order.kitchenStatus === 'preparing' ? '#f97316' : '#10b981'}"><div class="order-header"><span><strong>${order.ticketNumber}</strong> · ${order.items.length} items</span></div><div class="order-actions">${order.kitchenStatus === 'preparing' ? `<button class="mark-ready" data-ticket="${order.ticketNumber}" style="background:#10b981; color:white; padding:6px 12px; border-radius:40px;">✅ Mark Ready</button>` : ''}${order.kitchenStatus === 'ready' ? `<button class="mark-collected" data-ticket="${order.ticketNumber}" style="background:#dc2626; color:white; padding:6px 12px; border-radius:40px;">📦 Collected</button>` : ''}</div></div>`).join('');
+    document.querySelectorAll('.mark-ready').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.ticket, 'ready')));
+    document.querySelectorAll('.mark-collected').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.ticket, 'completed')));
+  }
+  
+  function updateOrderStatus(ticketNum, status) {
+    let orders = getOrders();
+    const idx = orders.findIndex(o => o.ticketNumber === ticketNum);
+    if(idx !== -1) { orders[idx].kitchenStatus = status; orders[idx].updatedAt = new Date().toISOString(); saveOrders(orders); if(status === 'completed') { let q = getQueue(); q = q.filter(t => t.ticketNumber !== ticketNum); saveQueue(q); } refreshAll(); }
+  }
+  
+  document.getElementById('globalCallNextBtn').addEventListener('click', callNext);
+  document.getElementById('payCardBtn').addEventListener('click', () => markAsPaid('Card'));
+  document.getElementById('payWalletBtn').addEventListener('click', () => markAsPaid('Wallet'));
+  document.getElementById('sendToKitchenBtn').addEventListener('click', sendToKitchen);
+  document.querySelectorAll('.order-tab').forEach(tab => tab.addEventListener('click', () => { document.querySelectorAll('.order-tab').forEach(t => t.classList.remove('active')); tab.classList.add('active'); renderKitchenOrders(); }));
+  
+  window.addEventListener('storage', () => refreshAll());
+  function init() { refreshAll(); setInterval(refreshAll, 3000); }
+  init();
+</script>
+</body>
+</html>
